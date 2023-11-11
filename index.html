@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Перемещение муравья</title>
+</head>
+<body>
+<h2>Расчет допустимых полей</h2>
+<form method="POST" enctype="multipart/form-data" action='#'>
+    <label for="start_x">Start X:</label><br>
+    <input id="start_x" type="text" name="x" value="1000"><br>
+    <label for="start_y">Start Y:</label><br>
+    <input id="start_y" type="text" name="y" value="1000"><br>
+    <label for="max_sum">Max Sum:</label><br>
+    <input id="max_sum" type="text" name="max_sum" value="25"><br><br>
+    <input type="button" value="Рассчитать" onclick="calc()">
+</form>
+<div id="map_description" style="margin-top: 20px; margin-bottom: 10px"></div>
+<canvas id="ant_map"></canvas>
+</body>
+<script>
+    // Функция для вычисления допустимых полей
+    function calc() {
+        var xhr = new XMLHttpRequest();
+        var x = document.getElementById("start_x").value;
+        var y = document.getElementById("start_y").value;
+        var max_sum = document.getElementById("max_sum").value;
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                // Получаем ответ от сервера и отрисовываем карту
+                var data = JSON.parse(xhr.responseText);
+                showMap(data);
+            }
+        };
+
+        // Открываем соединение с сервером
+        xhr.open('POST', '/', true);
+
+        // Устанавливаем заголовки для запроса
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Accept', 'application/json');
+
+        // Отправляем данные на сервер
+        xhr.send(JSON.stringify({x: x, y: y, max_sum: max_sum}));
+    }
+
+    // Функция для отрисовки карты
+    function showMap(data) {
+        var description = document.getElementById("map_description");
+        var canvas = document.getElementById("ant_map");
+
+        description.innerHTML = "Количество допустимых полей: " + data.count;
+
+        // вычисляем дополнительный сдвиг для вывода координат
+        var x_offset = (data.map.x1.toString().length + data.map.x2.toString().length) * 3;
+        var y_offset = 10;
+
+        // вычисляем размеры карты
+        var max_x = data.map.x2 - data.map.x1;
+        var max_y = data.map.y2 - data.map.y1;
+
+        // устанавливаем ширину и высоту карты
+        canvas.width = max_x * 5 + 10 + x_offset;
+        canvas.height = max_y * 5 + 10 + y_offset;
+
+        // Получаем контекст Canvas
+        var ctx = canvas.getContext("2d");
+
+        // Выводим начальные и конечные координаты
+        ctx.fillText(data.map.x1, 0, 10);
+        ctx.fillText(data.map.x2, max_x * 5 + 7, 10);
+        ctx.fillText(data.map.y1, 0, 0);
+        ctx.fillText(data.map.y2, 0, max_y * 5 + 8 + y_offset);
+
+        // Рисуем карту
+        for (var i = 0; i <= max_x; i++) {
+            for (var j = 0; j <= max_x; j++) {
+                // текущие реальные координаты
+                var cur_x = i + data.map.x1;
+                var cur_y = j + data.map.y1;
+
+                // задаем цвет точки, в зависимости от ее статуса
+                ctx.fillStyle = "rgb(0, 0, 255)";
+                var dot = data.dots[cur_x.toString() + '_' + cur_y.toString()];
+                if (dot && dot.available) {
+                    ctx.fillStyle = "rgb(0, 255, 0)";
+                }
+
+                // рисуем точку
+                ctx.fillRect(i * 5 + 5 + x_offset, j * 5 + 5 + y_offset, 3, 3);
+            }
+        }
+    }
+</script>
+</html>
